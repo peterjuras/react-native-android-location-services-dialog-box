@@ -34,10 +34,10 @@ class LocationServicesDialogBoxModule extends ReactContextBaseJavaModule impleme
         promiseCallback = promise;
         map = configMap;
         currentActivity = getCurrentActivity();
-        checkLocationService(false);
+        checkLocationService(false, !map.hasKey("showDialog") || map.getBoolean("showDialog"));
     }
 
-    private void checkLocationService(Boolean activityResult) {
+    private void checkLocationService(Boolean activityResult, Boolean showDialog) {
         if (currentActivity == null || map == null || promiseCallback == null) return;
         LocationManager locationManager = (LocationManager) currentActivity.getSystemService(Context.LOCATION_SERVICE);
 
@@ -46,10 +46,14 @@ class LocationServicesDialogBoxModule extends ReactContextBaseJavaModule impleme
             isEnabled = isEnabled && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
         }
         if (!isEnabled) {
-            if (activityResult) {
-                promiseCallback.reject(new Throwable("disabled"));
+            if (showDialog) {
+                if (activityResult) {
+                    promiseCallback.reject(new Throwable("disabled"));
+                } else {
+                    displayPromptForEnablingGPS(currentActivity, map, promiseCallback);
+                }
             } else {
-                displayPromptForEnablingGPS(currentActivity, map, promiseCallback);
+                promiseCallback.reject(new Throwable("disabled"));
             }
         } else {
             promiseCallback.resolve("enabled");
@@ -82,7 +86,7 @@ class LocationServicesDialogBoxModule extends ReactContextBaseJavaModule impleme
     public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
         if(requestCode == ENABLE_LOCATION_SERVICES) {
             currentActivity = activity;
-            checkLocationService(true);
+            checkLocationService(true, false);
         }
     }
 }
