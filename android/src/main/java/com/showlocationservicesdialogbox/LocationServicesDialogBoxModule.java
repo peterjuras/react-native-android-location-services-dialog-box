@@ -60,15 +60,19 @@ class LocationServicesDialogBoxModule extends ReactContextBaseJavaModule impleme
         }
     }
 
+    private static Boolean actionTaken;
+
     private static void displayPromptForEnablingGPS(final Activity activity, final ReadableMap configMap, final Promise promise) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         final String action = android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS;
 
+        actionTaken = false;
         builder.setMessage(Html.fromHtml(configMap.getString("message")))
                 .setPositiveButton(configMap.getString("ok"),
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialogInterface, int id) {
                                 activity.startActivityForResult(new Intent(action), ENABLE_LOCATION_SERVICES);
+                                actionTaken = true;
                                 dialogInterface.dismiss();
                             }
                         })
@@ -76,9 +80,17 @@ class LocationServicesDialogBoxModule extends ReactContextBaseJavaModule impleme
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialogInterface, int id) {
                                 promise.reject(new Throwable("disabled"));
+                                actionTaken = true;
                                 dialogInterface.cancel();
                             }
-                        });
+                        })
+                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    public void onDismiss(DialogInterface dialogInterface) {
+                        if (!actionTaken) {
+                            promise.reject(new Throwable("disabled"));
+                        }
+                    }
+                });
         builder.create().show();
     }
 
